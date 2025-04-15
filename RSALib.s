@@ -34,8 +34,8 @@ gcd:
     #Storing the value of the stack
     SUB sp, sp, #12
     STR lr, [sp, #0]
-    STR r0, [sp, #4]
-    STR r1, [sp, #8]
+    STR r4, [sp, #4]
+    STR r5, [sp, #8]
 
     #Loading the two numbers into r4 and r5
     MOV r4, r0
@@ -44,7 +44,7 @@ gcd:
     #while b>0
     beginLoop:
     CMP r5, #0
-    BEQ endLoop
+    BLE endLoop
         #r0 = tmp
         #tmp = b
         MOV r0, r5
@@ -52,7 +52,7 @@ gcd:
 
         modLoop:
         CMP r1, r5
-        BLE endModLoop
+        BLT endModLoop
             SUB r1, r1, r5
             B modLoop
         
@@ -68,8 +68,8 @@ gcd:
 
     #Pop the stack
     LDR lr, [sp, #0]
-    LDR r0, [sp, #4]
-    LDR r1, [sp, #8]
+    LDR r4, [sp, #4]
+    LDR r5, [sp, #8]
     ADD sp, sp, #12
     MOV pc, lr
 .data
@@ -152,9 +152,55 @@ modulo:
 .data
 #END FUNCTION modulo
 
-
+#
+#Function Name: cpubexp
+#Author:        Cory Drangel
+#Date:          April 14, 2025
+#Purpose:       Determine if public key exponent (e) is 1 < e < totient
+#                   and that gcd(e, totient) = 1
+#
 .text
 cpubexp:
+     #Function dictionary
+     #r4 - public key exponent (e)
+     #r5 - totient
+
+     #Push the stack
+     SUB sp, sp, #12
+     STR lr, [sp]
+     STR r4, [sp, #4]
+     STR r5, [sp, #8]
+
+     #Save variables in r4 (e) and r5 (totient)
+     MOV r4, r0
+     MOV r5, r1
+
+     #Logical variables for determing if e is valid
+     MOV r2, #0
+     #if e > 1
+     CMP r4, #1
+     ADDGT r2, r2, #1
+     MOV r3, #0
+     #if e < totient
+     CMP r4, r5
+     ADDLT r3, r3, #1
+     AND r2, r2, r3
+
+     MOV r0, r4
+     MOV r1, r5
+     BL gcd
+     MOV r1, #0
+     #if gcd(e, totient) = 1
+     CMP r0, #1
+     ADDEQ r1, r1, #1
+     AND r0, r1, r2
+
+     #Pop the stack
+     LDR lr, [sp]
+     LDR r4, [sp, #4]
+     LDR r5, [sp, #8]
+     ADD sp, sp, #12
+     MOV pc, lr
 .data
 #END FUNCTION cpubexp
 
