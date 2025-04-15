@@ -67,9 +67,7 @@ main:
 		CMP r1, r2
 		BLT Generate
 			BGT Decrypt
-			LDR r0, =encrypt
-			BL printf
-			B End
+			B Encrypt
 
 		Generate:
 		LDR r0, =generate
@@ -79,6 +77,15 @@ main:
 		Encrypt:
 		LDR r0, =encrypt
 		BL printf
+
+		#Read the users input
+        	LDR r0, =messageFormat
+        	LDR r1, =message
+        	BL scanf
+
+		#Store message to encrypt in r0 and call encrypt
+		LDR r0, =message
+		BL encrypt
 		B End
 
 		Decrypt:
@@ -90,7 +97,7 @@ main:
 	End:
 		#Pop	
 		LDR lr, [sp,#0]
-		LDR r12,[sp,#4]
+		LDR r11,[sp,#4]
 		ADD sp, sp, #8
 		MOV pc, lr
 
@@ -104,9 +111,10 @@ main:
 #	valid: .asciz "Ok you can continue...\n"
 #	entry: .asciz "Entry is %d.\n"
 	generate: .asciz "Here we will branch to the generate function flow.\n"
-	encrypt: .asciz "Here we will branch to the encrypt function flow.\n"
+	encrypt: .asciz "Input a message to be encrypted\n"
 	decrypt: .asciz "Here we will branch to the decrypt function flow.\n"
-
+	messageFormat: .asciz "%[^\n]"
+	message: .space 50
 	numFormat: .asciz "%d"
 	mainSelection: .word 0
 
