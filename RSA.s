@@ -16,6 +16,7 @@ main:
 
 	# Dictionary
 	# r4 is %4 result to verify correct selection
+        # r5 - totient
 	# r11 = Initial choice
 	
 	#Push
@@ -54,10 +55,20 @@ main:
 		CMP r0, #1
 		
 		BEQ Proceed
-			LDR r0, =invalid
+  			LDR r0, =invalid
 			BL printf
 			B CheckEntry
 	
+        #Determine the totient: totient = (p-1)(q-1)
+        LDR r0, =p
+        LDR r0, [r0]
+        LDR r1, =q
+        LDR r1, [r1]
+        SUB r0, r0, #1
+        SUB r1, r1, #1
+       
+        #Store the totient in r5
+        MUL r5, r0, r1
 
 	Proceed:
 
@@ -79,9 +90,9 @@ main:
 		BL printf
 
 		#Read the users input
-        	LDR r0, =messageFormat
-        	LDR r1, =message
-        	BL scanf
+        LDR r0, =messageFormat
+        LDR r1, =message
+        BL scanf
 
 		#Store message to encrypt in r0 and call encrypt
 		LDR r0, =message
@@ -117,4 +128,5 @@ main:
 	message: .space 50
 	numFormat: .asciz "%d"
 	mainSelection: .word 0
-
+        p: .word 0
+        q: .word 0
