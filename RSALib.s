@@ -272,8 +272,6 @@ encrypt:
         ADD sp, sp, #24
         MOV pc, lr
 .data
-	output: .asciz "%d\n"
-	.balign 1
 	filename: .asciz "encrypt.txt"
 	character: .space 50
 #END FUNCTION encrypt
