@@ -213,7 +213,69 @@ cprivexp:
 
 .text
 encrypt:
+	
+	#Function Dictionary
+	#r4 - Public key exponent
+	#r5 - Modulus
+	#r6 - Input string
+	#r8 - Encrypt loop counter
+	#r9 - encrypt.txt fd
+
+	#Push the stack
+	SUB sp, sp, #24
+	STR lr, [sp]
+	STR r4, [sp, #4]
+	STR r5, [sp, #8]
+	STR r6, [sp, #12]
+	STR r8, [sp, #16]
+	STR r9, [sp, #20]
+
+	MOV r6, r0
+	MOV r8, #0
+
+	LDR r0, =filename
+	MOV r1, #0101
+	LDR r2, =0666
+	MOV r7, #5
+	SVC 0
+	MOV r9, r0
+
+	encryptloop:
+		CMP r8, #50
+		BEQ endencryptloop
+
+		LDRB r3, [r6, r8]
+		CMP r3, #0
+		BEQ endencryptloop
+		LDR r1, =character
+		STR r3, [r1]
+		MOV r2, #4
+		MOV r0, r9
+		MOV r7, #4
+		SVC 0
+		ADD r8, r8, #1
+		B encryptloop
+
+	endencryptloop:	
+
+	MOV r0, r9
+	MOV r7, #6
+	SVC 0
+
+        #Pop the stack
+        LDR lr, [sp]
+        LDR r4, [sp, #4]
+        LDR r5, [sp, #8]
+	LDR r6, [sp, #12]
+	LDR r8, [sp, #16]
+	LDR r9, [sp, #20]
+        ADD sp, sp, #24
+        MOV pc, lr
 .data
+	output: .asciz "%d\n"
+	.balign 1
+	filename: .asciz "encrypt.txt"
+	character: .space 50
 #END FUNCTION encrypt
 
 
