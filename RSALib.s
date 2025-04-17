@@ -219,7 +219,7 @@ encrypt:
 	#r5 - Modulus
 	#r6 - Input string
 	#r8 - Encrypt loop counter
-	#r9 - encrypt.txt fd
+	#r9 - encrypt.txt file pointer
 
 	#Push the stack
 	SUB sp, sp, #24
@@ -234,33 +234,29 @@ encrypt:
 	MOV r8, #0
 
 	LDR r0, =filename
-	MOV r1, #0101
-	LDR r2, =0666
-	MOV r7, #5
-	SVC 0
+	LDR r1, =filetask
+	BL fopen
+
 	MOV r9, r0
 
 	encryptloop:
 		CMP r8, #50
 		BEQ endencryptloop
 
-		LDRB r3, [r6, r8]
-		CMP r3, #0
+		LDRB r2, [r6, r8]
+		CMP r2, #0
 		BEQ endencryptloop
-		LDR r1, =character
-		STR r3, [r1]
-		MOV r2, #4
+		LDR r1, =numberformat
 		MOV r0, r9
-		MOV r7, #4
-		SVC 0
+		BL fprintf
+		
 		ADD r8, r8, #1
 		B encryptloop
 
 	endencryptloop:	
 
 	MOV r0, r9
-	MOV r7, #6
-	SVC 0
+	BL fclose
 
         #Pop the stack
         LDR lr, [sp]
@@ -273,7 +269,9 @@ encrypt:
         MOV pc, lr
 .data
 	filename: .asciz "encrypt.txt"
-	character: .space 50
+	asciicharacter: .word 0
+	numberformat: .asciz "%d "
+	filetask: .asciz "w"
 #END FUNCTION encrypt
 
 
