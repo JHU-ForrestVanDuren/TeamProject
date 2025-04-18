@@ -87,8 +87,11 @@ pow:
     # r6 holds value containing number of loop iterations remaining
 
     #push stack
-    SUB sp, sp, #4
+    SUB sp, sp, #16
     STR lr, [sp]
+    STR r4, [sp, #4]
+    STR r5, [sp, #8]
+    STR r6, [sp, #12]
 
     # Store Values needed for Later
     MOV r4, r0
@@ -113,7 +116,10 @@ pow:
     return:
         # return stack
         LDR lr, [sp]
-        ADD sp, sp, #4
+	LDR r4, [sp, #4]
+	LDR r5, [sp, #8]
+	LDR r6, [sp, #12]
+        ADD sp, sp, #16
         MOV pc, lr
 
 .data
@@ -230,6 +236,10 @@ encrypt:
 	STR r8, [sp, #16]
 	STR r9, [sp, #20]
 
+	#MOV r4, #4
+	#MOV r5, #21
+	MOV r4, r0
+	MOV r5, r1
 	MOV r6, r0
 	MOV r8, #0
 
@@ -246,6 +256,15 @@ encrypt:
 		LDRB r2, [r6, r8]
 		CMP r2, #0
 		BEQ endencryptloop
+		
+		MOV r0, r2
+		MOV r1, r4
+		BL pow
+
+		MOV r1, r5
+		BL modulo
+		MOV r2, r0
+
 		LDR r1, =numberformat
 		MOV r0, r9
 		BL fprintf
