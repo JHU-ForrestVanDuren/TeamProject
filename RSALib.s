@@ -238,8 +238,8 @@ encrypt:
 
 	#MOV r4, #4
 	#MOV r5, #21
-	MOV r4, r0
-	MOV r5, r1
+	MOV r4, r1
+	MOV r5, r2
 	MOV r6, r0
 	MOV r8, #0
 
