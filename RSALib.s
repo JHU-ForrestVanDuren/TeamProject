@@ -302,5 +302,57 @@ decrypt:
 
 .text
 findPrime:
+
+        #Push the stack record
+        SUB sp, sp, #20
+        STR lr, [sp, #0]
+        STR r4, [sp, #4]
+        STR r5, [sp, #8]
+        STR r6, [sp, #12]
+        STR r7, [sp, #16]
+
+        MOV r4, r0
+	MOV r5, #2
+	MOV r1, r5
+
+	BL __aeabi_idiv
+
+	MOV r6, r0
+	MOV r7, #0
+
+	
+	primeCheckLoop:
+
+		CMP r5, r6
+		BGT endPrimeCheckLoop
+
+		MOV r0, r4
+		MOV r1, r5
+
+		BL modulo
+
+		CMP r0, #0
+		BEQ notPrime
+		ADD r5, r5, #2
+		B primeCheckLoop
+
+		notPrime:
+			MOV r7, #1
+			B endPrimeCheckLoop
+
+
+	endPrimeCheckLoop:
+
+	MOV r0, r7	
+
+        #Pop the stack record
+        LDR lr, [sp, #0]
+        LDR r4, [sp, #4]
+        LDR r5, [sp, #8]
+        LDR r6, [sp, #12]
+        LDR r7, [sp, #16]
+        ADD sp, sp, #20
+        MOV pc, lr	
+
 .data
 #END FUNCTION findPrime
