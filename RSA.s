@@ -17,12 +17,20 @@ main:
 	# Dictionary
 	# r4 is %4 result to verify correct selection
         # r5 - totient
+	# r6 - n
+	# r7 - e
+	# r8 - Current file pointer
 	# r11 = Initial choice
 	
 	#Push
-	Sub sp, sp, #4
+	Sub sp, sp, #28
 	STR lr, [sp]
-	STR r11,[sp, #4] 
+	STR r4, [sp, #4]
+	STR r5, [sp, #8]
+	STR r6, [sp, #12]
+	STR r7, [sp, #16]
+	STR r8, [sp, #20]
+	STR r11,[sp, #24] 
 		
 	# Prompt for initial selection
 	LDR r0, =mainPrompt
@@ -44,7 +52,7 @@ main:
 		# Test > 0
 		MOV r2, #0 // LogiBit1
 		CMP r1, #0
-	 	ADDGE r2, r2, #1
+	 	ADDGT r2, r2, #1
 
 		# Test < 4
 		MOV r3, #0 // LogiBit2
@@ -57,19 +65,12 @@ main:
 		BEQ Proceed
   			LDR r0, =invalid
 			BL printf
+			
+			LDR r0, =invalidformat
+			BL scanf
+
 			B CheckEntry
 	
-        #Determine the totient: totient = (p-1)(q-1)
-        LDR r0, =p
-        LDR r0, [r0]
-        LDR r1, =q
-        LDR r1, [r1]
-        SUB r0, r0, #1
-        SUB r1, r1, #1
-       
-        #Store the totient in r5
-        MUL r5, r0, r1
-
 	Proceed:
 
 		MOV r1, r11 // Restore selection to r1 (in case it was overwritten)
@@ -83,6 +84,163 @@ main:
 		Generate:
 		LDR r0, =generate
 		BL printf
+
+		primeLoop1:
+
+			LDR r0, =pprompt
+			BL printf
+
+			LDR r0, =numFormat
+			LDR r1, =p
+			BL scanf
+
+			MOV r1, #0
+			MOV r2, #0
+
+			LDR r0, =p
+			LDR r0, [r0]
+
+			CMP r0, #13
+			MOVGE r1, #1
+			
+			CMP r0, #47
+			MOVLE r2, #1
+
+			AND r1, r1, r2
+			CMP r1, #1
+
+			BNE invalidp
+
+			BL findPrime
+			CMP r0, #1
+			BEQ invalidp
+			B endPrimeLoop1	
+
+			invalidp:
+				LDR r0, =invalid
+				BL printf
+
+				LDR r0, =invalidformat
+				BL scanf
+				B primeLoop1
+
+		endPrimeLoop1:
+
+                primeLoop2:
+
+
+                        LDR r0, =qprompt
+                        BL printf
+
+                        LDR r0, =numFormat
+                        LDR r1, =q
+                        BL scanf
+
+                        MOV r1, #0
+                        MOV r2, #0
+
+                        LDR r0, =q
+                        LDR r0, [r0]
+
+                        CMP r0, #13
+                        MOVGE r1, #1
+
+                        CMP r0, #47
+                        MOVLE r2, #1
+
+                        AND r1, r1, r2
+                        CMP r1, #1
+
+                        BNE invalidq
+
+                        BL findPrime
+                        CMP r0, #1
+                        BEQ invalidq
+			
+                        B endPrimeLoop2
+
+
+                        invalidq:
+                                LDR r0, =invalid
+                                BL printf
+
+                                LDR r0, =invalidformat
+                                BL scanf
+                                B primeLoop2
+
+
+
+                endPrimeLoop2:
+
+		#Load the input primes into r0 and r1
+		LDR r0, =p
+		LDR r0, [r0]
+		LDR r1, =q
+		LDR r1, [r1]
+
+		#Calculate n and store in r6
+		MUL r6, r0, r1
+
+		#Determine the totient: totient = (p-1)(q-1)
+		SUB r0, r0, #1
+		SUB r1, r1, #1
+
+        	#Store the totient in r5
+        	MUL r5, r0, r1
+
+		eloop:
+			LDR r0, =eprompt
+			MOV r1, r5
+			MOV r2, r5
+			BL printf
+
+			LDR r0, =numFormat
+			LDR r1, =e
+			BL scanf
+
+			LDR r7, =e
+			LDR r7, [r7]
+			MOV r0, r7
+			MOV r1, r5
+
+			BL cpubexp
+
+			CMP r0, #1
+			BNE enotvalid
+			B endeloop
+
+			enotvalid:
+				LDR r0, =invalid
+				BL printf
+
+				LDR r0, =invalidformat
+				BL scanf
+
+				B eloop
+
+		endeloop:
+
+		#TODO - r0 and r1 need to be loaded with e and the totient
+	       	#BL cprivexp
+
+		LDR r0, =pubKeyFile
+		LDR r1, =writeTask
+		BL fopen
+		
+		MOV r8, r0
+
+		LDR r1, =numFormatSpace
+		MOV r2, r6
+		BL fprintf
+
+		LDR r1, =numFormatSpace
+		MOV r0, r8
+		MOV r2, r7
+		BL fprintf
+
+		MOV r0, r8
+		BL fclose
+
 		B End			
 
 		Encrypt:
@@ -108,8 +266,13 @@ main:
 	End:
 		#Pop	
 		LDR lr, [sp,#0]
-		LDR r11,[sp,#4]
-		ADD sp, sp, #8
+		LDR r4, [sp, #4]
+		LDR r5, [sp, #8]
+		LDR r6, [sp, #12]
+		LDR r7, [sp, #16]
+		LDR r8, [sp, #20]
+		LDR r11,[sp,#24]
+		ADD sp, sp, #28
 		MOV pc, lr
 
 
@@ -118,7 +281,8 @@ main:
 
 	mainPrompt: .asciz "\n\n***** WELCOME TO RSA ENCRYPT/DECRYPT APP *****"
 	choices: .asciz "\n\n\tPlease choose from the following:\n\t[1] Generate Public & Private Keys\n\t[2] Encrypt\n\t[3] Decrypt\n\nMake your selection: "
-	invalid: .asciz "\n\t!! ERROR: Invalid Entry !!"
+	invalid: .asciz "\n\t!! ERROR: Invalid Entry !!\n"
+	invalidformat: .asciz "%*[^\n]"
 #	valid: .asciz "Ok you can continue...\n"
 #	entry: .asciz "Entry is %d.\n"
 	generate: .asciz "Here we will branch to the generate function flow.\n"
@@ -127,6 +291,13 @@ main:
 	messageFormat: .asciz " %[^\n]"
 	message: .space 50
 	numFormat: .asciz "%d"
+	numFormatSpace: .asciz "%d "
 	mainSelection: .word 0
         p: .word 0
         q: .word 0
+	e: .word 0
+	pprompt: .asciz "Enter a prime number between 13 and 47 \n"
+	qprompt: .asciz "Enter another prime number between 13 and 47 \n"
+	eprompt: .asciz "Enter a number greater then 1 and less then %d which is also co prime to %d\n"
+	pubKeyFile: .asciz "pubkey.txt"
+	writeTask: .asciz "w"
