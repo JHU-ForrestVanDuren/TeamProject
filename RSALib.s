@@ -296,7 +296,83 @@ encrypt:
 
 .text
 decrypt:
+
+    # AUTHOR: Adit Rao
+    # PURPOSE: Read encrypted.txt, use private key exponent and modulus to produce decrypted.txt
+
+    # Function dictionary
+    # r4 - private key (d)
+    # r5 - modulus (n)
+    # r6 - decrypt.txt file ptr
+    # r7 - encrypt.txt file ptr
+
+    # Push
+    SUB sp, sp, #4
+    STR lr, [sp]
+    STR r4, [sp,#4]
+    STR r5, [sp,#8]
+    STR r6, [sp,#12]
+    STR r7, [sp,#16]
+
+    # Vault key data
+    MOV r4, r1 // assume 'd' originally stored in r1
+    MOV r5, r2 // assume 'n' originally stored in r2
+
+    
+    # Open read filestream, store ptr in r7
+    LDR r0, =in_File
+    LDR r1, =r_Filetask
+    BL fopen
+    MOV r7, r0
+
+    # Open write filestream, store ptr in r6
+    LDR r0, =out_File
+    LDR r1, =w_Filetask
+    BL fopen
+    MOV r6, r0
+    
+    decryptLoop:
+        MOV r0, r7
+        BL fgetc
+        CMP r0, #-1  // must call fgetc before determining EOF
+        BEQ endLoop
+
+        MOV r1, r4 // move 'd' to r1 for POW function
+        BL pow
+
+        MOV r1, r5 // move 'n' into r1 for MODULO
+        BL modulo
+        
+        MOV r1, r6
+        BL fputc
+
+        B decryptLoop
+
+    endLoop:
+        MOV r1, r7
+        BL fclose
+    
+        MOV r0, r6
+        BL fclose
+
+        LDR r0, =finish
+        BL printf
+
+        # Pop
+        LDR lr, [sp]
+        LDR r4, [sp,#4]
+        LDR r5, [sp,#8]
+        LDR r6, [sp,#12]
+        LDR r7, [sp,#16]
+        ADD sp, sp, #20
+        MOV pc, lr
 .data
+    in_File: .asciz "encrypted.txt"
+    out_File: .asciz "decrypted.txt"
+    numFormat: .asciz "%d"
+    r_Filetask: .asciz "r"
+    w_Filetask: .asciz "w"
+    finish: .asciz "Your cipher was decrypted and stored in 'decrypted.txt'.\n"
 #END FUNCTION decrypt
 
 
