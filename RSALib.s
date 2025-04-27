@@ -376,47 +376,95 @@ cpubexp:
 .data
 #END FUNCTION cpubexp
 
+#
+# cprivexp(totient, e)
+# This function calculates the RSA private key 'd' using the extended Euclidean algorithm.
+# It takes two inputs: the totient and the public exponent (e), and computes the modular inverse
+# of e modulo totient, which is the private key 'd'.
+#
+# The algorithm stores intermediate results of the extended Euclidean process:
+#   - q -> Quotient
+#   - rem -> Remainder
+#   - s -> Coefficients for s (used in calculation of d)
+#   - t -> Coefficients for t (used in calculation of d)
+#
+# A 1 index refers to the previous iteration, and a 2 index refers to two iterations ago.
 
 .text
 cprivexp:
 
 	# Save the return address
-	SUB sp, sp, #16
+	SUB sp, sp, #4
 	STR lr, [sp, #0]
-	STR r4, [sp, #4]
-	STR r5, [sp, #8]
-	STR r6, [sp, #12]
 
-	MOV r4, r0
-	MOV r5, r1
-	MOV r6, #2
+	# Initialize the loop variables
+	STR r0, [rem2]  # totient
+	STR r1, [rem1]  # public exponent
+	MOV r1, #0      # s1 = 0
+	MOV r2, #1      # s2 = 1
+	STR r1, [s1]
+	STR r2, [s2]
+	STR r2, [t1]
+	STR r1, [t2]
+	B loop
 
-	privexploop:
+loop:
+	# Load current remainders
+	LDR r0, [rem2]
+	LDR r1, [rem1]
 
-		MUL r0, r5, r6
-		MOV r1, r4
-		BL modulo
+	# Calculate quotient
+	BL __aeabi_idiv
+	STR r0, [q1]
 
-		CMP r0, #1
-		BEQ endprivexploop
+	# Update s coefficients
+	LDR r1, [s1]
+	LDR r2, [s2]
+	MUL r3, r1, r0
+	SUB r4, r3, r2
+	STR r1, [s2]
+	STR r4, [s1]
 
-		ADD r6, r6, #1
-		B privexploop		
+	# Update t coefficients
+	LDR r1, [t1]
+	LDR r2, [t2]
+	MUL r3, r1, r0
+	SUB r4, r3, r2
+	STR r1, [t2]
+	STR r4, [t1]
 
-	endprivexploop:
+	# Calculate new remainder
+	LDR r0, [rem2]
+	LDR r1, [rem1]
+	BL modulo
+	LDR r1, [rem1]
+	STR r1, [rem2]
+	STR r0, [rem1]
 
-	MOV r0, r6
+	# End loop if remainder is 0
+	CMP r0, #0
+	BNE loop
+	B return
+
+return:
+	# Return private key 'd' (stored in t2)
+	LDR r0, =t2
+	LDR r0, [r0]
 
 	# Restore and return
 	LDR lr, [sp, #0]
-	LDR r4, [sp, #4]
-	LDR r5, [sp, #8]
-	LDR r6, [sp, #12]
-	ADD sp, sp, #16
+	ADD sp, sp, #4
 	MOV pc, lr
 
 
 .data
+	rem1: .word 0
+	rem2: .word 0
+	t1: .word 0
+	t2: .word 0
+	s1: .word 0
+	s2: .word 0
+	q1: .word 0
 
 #END FUNCTION cprivexp
 
