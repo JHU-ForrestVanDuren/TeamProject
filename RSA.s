@@ -268,6 +268,29 @@ main:
 		LDR r0, =messageFormat
 		LDR r1, =message
 		BL scanf
+		
+		LDR r0, =pubKeyFile
+		LDR r1, =readTask
+		BL fopen
+		MOV r8, r0
+
+		LDR r1, =numFormat
+		LDR r2, =n
+		BL fscanf
+
+		MOV r0, r8
+		LDR r1, =numFormat
+		LDR r2, =e
+		BL fscanf
+
+		MOV r0, r8
+		BL fclose
+
+		LDR r1, =e
+		LDR r1, [r1]
+
+		LDR r2, =n
+		LDR r2, [r2]
 
 		#Store message to encrypt in r0 and call encrypt
 		LDR r0, =message
@@ -313,9 +336,11 @@ main:
         p: .word 0
         q: .word 0
 	e: .word 0
+	n: .word 0
 	pprompt: .asciz "Enter a prime number between 13 and 47 \n"
 	qprompt: .asciz "Enter another prime number between 13 and 47 \n"
 	eprompt: .asciz "Enter a number greater then 1 and less then %d which is also co prime to %d\n"
 	pubKeyFile: .asciz "pubkey.txt"
 	privKeyFile: .asciz "privkey.txt"
 	writeTask: .asciz "w"
+	readTask:  .asciz "r"
