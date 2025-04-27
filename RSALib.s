@@ -210,7 +210,7 @@ pow:
         MOV pc, lr
 
 .data
-    numArray: .word 0
+    numArray: .space 10000
 #END FUNCTION pow
 
 #
@@ -300,6 +300,9 @@ modLarge:
 		#Calculate the remainder, decrease the array index and iterate the loop
                 MUL r1, r0, r4
                 SUB r6, r5, r1
+		MUL r1, r7, r8
+		MOV r2, #0
+		STR r2, [r9, r1]
                 SUB r8, r8, #1
                 B modloop
 
@@ -376,7 +379,45 @@ cpubexp:
 
 .text
 cprivexp:
+
+	# Save the return address
+	SUB sp, sp, #16
+	STR lr, [sp, #0]
+	STR r4, [sp, #4]
+	STR r5, [sp, #8]
+	STR r6, [sp, #12]
+
+	MOV r4, r0
+	MOV r5, r1
+	MOV r6, #2
+
+	privexploop:
+
+		MUL r0, r5, r6
+		MOV r1, r4
+		BL modulo
+
+		CMP r0, #1
+		BEQ endprivexploop
+
+		ADD r6, r6, #1
+		B privexploop		
+
+	endprivexploop:
+
+	MOV r0, r6
+
+	# Restore and return
+	LDR lr, [sp, #0]
+	LDR r4, [sp, #4]
+	LDR r5, [sp, #8]
+	LDR r6, [sp, #12]
+	ADD sp, sp, #16
+	MOV pc, lr
+
+
 .data
+
 #END FUNCTION cprivexp
 
 
@@ -391,16 +432,15 @@ encrypt:
 	#r9 - encrypt.txt file pointer
 
 	#Push the stack
-	SUB sp, sp, #24
+	SUB sp, sp, #28
 	STR lr, [sp]
 	STR r4, [sp, #4]
 	STR r5, [sp, #8]
 	STR r6, [sp, #12]
-	STR r8, [sp, #16]
-	STR r9, [sp, #20]
+	STR r7, [sp, #16]
+	STR r8, [sp, #20]
+	STR r9, [sp, #24]
 
-	#MOV r4, #4
-	#MOV r5, #21
 	MOV r4, r1
 	MOV r5, r2
 	MOV r6, r0
@@ -424,8 +464,8 @@ encrypt:
 		MOV r1, r4
 		BL pow
 
-		MOV r1, r5
-		BL modulo
+		MOV r2, r5
+		BL modLarge
 		MOV r2, r0
 
 		LDR r1, =numberformat
@@ -445,13 +485,13 @@ encrypt:
         LDR r4, [sp, #4]
         LDR r5, [sp, #8]
 	LDR r6, [sp, #12]
-	LDR r8, [sp, #16]
-	LDR r9, [sp, #20]
-        ADD sp, sp, #24
+	LDR r7, [sp, #16]
+	LDR r8, [sp, #20]
+	LDR r9, [sp, #24]
+        ADD sp, sp, #28
         MOV pc, lr
 .data
 	filename: .asciz "encrypt.txt"
-	asciicharacter: .word 0
 	numberformat: .asciz "%d "
 	filetask: .asciz "w"
 #END FUNCTION encrypt
