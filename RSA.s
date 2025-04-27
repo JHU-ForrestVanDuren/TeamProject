@@ -20,6 +20,7 @@ main:
 	# r6 - n
 	# r7 - e
 	# r8 - Current file pointer
+	# r9 - d
 	# r11 = Initial choice
 	
 	#Push
@@ -220,8 +221,11 @@ main:
 
 		endeloop:
 
-		#TODO - r0 and r1 need to be loaded with e and the totient
-	       	#BL cprivexp
+	       	MOV r0, r5
+		MOV r1, r7
+		BL cprivexp
+
+		MOV r9, r0
 
 		LDR r0, =pubKeyFile
 		LDR r1, =writeTask
@@ -236,6 +240,19 @@ main:
 		LDR r1, =numFormatSpace
 		MOV r0, r8
 		MOV r2, r7
+		BL fprintf
+
+		MOV r0, r8
+		BL fclose
+
+		LDR r0, =privKeyFile
+		LDR r1, =writeTask
+		BL fopen
+	
+		MOV r8, r0
+
+		LDR r1, =numFormat
+		MOV r2, r9
 		BL fprintf
 
 		MOV r0, r8
@@ -300,4 +317,5 @@ main:
 	qprompt: .asciz "Enter another prime number between 13 and 47 \n"
 	eprompt: .asciz "Enter a number greater then 1 and less then %d which is also co prime to %d\n"
 	pubKeyFile: .asciz "pubkey.txt"
+	privKeyFile: .asciz "privkey.txt"
 	writeTask: .asciz "w"
