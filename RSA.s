@@ -151,8 +151,15 @@ main:
 
                         AND r1, r1, r2
                         CMP r1, #1
+			
+			BNE invalidq
 
-                        BNE invalidq
+			MOV r2, #0
+			LDR r3, =p
+			LDR r3, [r3]
+			
+			CMP r0, r3
+                        BEQ invalidq
 
                         BL findPrime
                         CMP r0, #1
@@ -278,6 +285,8 @@ main:
 		LDR r2, =n
 		BL fscanf
 
+		LDR r0, =n
+		LDR r0, [r0]
 		MOV r0, r8
 		LDR r1, =numFormat
 		LDR r2, =e
@@ -298,10 +307,39 @@ main:
 		B End
 
 		Decrypt:
-		LDR r0, =decrypt
+		LDR r0, =decryptPrompt
 		BL printf
-		B End
+		
+		# Open file with public key and store *file in r8
+		LDR r0, =pubKeyFile
+		LDR r1, =readTask
+		BL fopen
+		MOV r8, r0
+		
+		# Store 'n' for later use
+		LDR r1, =numFormat
+		LDR r2, =n
+		BL fscanf
+		
+		# Open file with private key and store *file in r8
+		LDR r0, =privKeyFile
+		LDR r1, =readTask
+		BL fopen
+		MOV r8, r0
+		
+		# Store 'd' for later use
+		LDR r1, =numFormat
+		LDR r2, =d
+		BL fscanf
 
+		# Now store d,n to correct registers for decrypt function	
+		LDR r1, =d
+		LDR r1, [r1]
+		LDR r2, =n
+		LDR r2, [r2]
+
+		BL decrypt
+		B End
 
 	End:
 		#Pop	
@@ -327,7 +365,7 @@ main:
 #	entry: .asciz "Entry is %d.\n"
 	generate: .asciz "Here we will branch to the generate function flow.\n"
 	encryptPrompt: .asciz "Input a message to be encrypted\n"
-	decrypt: .asciz "Here we will branch to the decrypt function flow.\n"
+	decryptPrompt: .asciz "Here we will branch to the decrypt function flow.\n"
 	messageFormat: .asciz " %[^\n]"
 	message: .space 50
 	numFormat: .asciz "%d"
@@ -337,8 +375,9 @@ main:
         q: .word 0
 	e: .word 0
 	n: .word 0
+	d: .word 0
 	pprompt: .asciz "Enter a prime number between 13 and 47 \n"
-	qprompt: .asciz "Enter another prime number between 13 and 47 \n"
+	qprompt: .asciz "Enter another prime number between 13 and 47 that is distinct from your last input\n"
 	eprompt: .asciz "Enter a number greater then 1 and less then %d which is also co prime to %d\n"
 	pubKeyFile: .asciz "pubkey.txt"
 	privKeyFile: .asciz "privkey.txt"
