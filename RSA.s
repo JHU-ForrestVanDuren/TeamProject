@@ -154,7 +154,6 @@ main:
 			
 			BNE invalidq
 
-			MOV r2, #0
 			LDR r3, =p
 			LDR r3, [r3]
 			
@@ -279,6 +278,10 @@ main:
 		LDR r0, =pubKeyFile
 		LDR r1, =readTask
 		BL fopen
+
+		CMP r0, #0
+		BEQ noPublicKey 
+
 		MOV r8, r0
 
 		LDR r1, =numFormat
@@ -305,6 +308,12 @@ main:
 		LDR r0, =message
 		BL encrypt
 		B End
+
+		noPublicKey:
+
+			LDR r0, =noPublicKeyPrompt
+			BL printf
+			B End
 
 		Decrypt:
 		LDR r0, =decryptPrompt
@@ -366,6 +375,7 @@ main:
 	generate: .asciz "Here we will branch to the generate function flow.\n"
 	encryptPrompt: .asciz "Input a message to be encrypted\n"
 	decryptPrompt: .asciz "Here we will branch to the decrypt function flow.\n"
+	noPublicKeyPrompt: .asciz "No public key file is present. Generate the keys before running encrypt\n"
 	messageFormat: .asciz " %[^\n]"
 	message: .space 50
 	numFormat: .asciz "%d"
