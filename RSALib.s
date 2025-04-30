@@ -379,7 +379,6 @@ cpubexp:
 
 .text
 cprivexp:
-
 	# Save the return address
 	SUB sp, sp, #16
 	STR lr, [sp, #0]
@@ -387,36 +386,109 @@ cprivexp:
 	STR r5, [sp, #8]
 	STR r6, [sp, #12]
 
-	MOV r4, r0
-	MOV r5, r1
-	MOV r6, #2
+	# Initialize the loop variables
+	LDR r5, =rem2
+	LDR r4, =rem1
+	LDR r6, =totient
 
-	privexploop:
+	STR r0, [r5]
+	STR r1, [r4]
+	STR r0, [r6]
+	MOV r1, #0
+	MOV r2, #1
 
-		MUL r0, r5, r6
-		MOV r1, r4
+	LDR r5, =s1
+	LDR r4, =s2
+	STR r1, [r5]
+	STR r2, [r4]
+
+	LDR r5, =t1
+	LDR r4, =t2
+	STR r2, [r5]
+	STR r1, [r4]
+	B loopExtEuclidean
+
+	loopExtEuclidean:
+		# Load current remainders
+		LDR r5, =rem2
+		LDR r6, =rem1
+		LDR r0, [r5]
+		LDR r1, [r6]
+		
+		# Calculate quotient
+		BL __aeabi_idiv
+		LDR r5, =q1
+		STR r0, [r5]
+		
+		# Update s coefficients
+		LDR r5, =s1
+		LDR r6, =s2
+		LDR r1, [r5]
+		LDR r2, [r6]
+		MUL r3, r1, r0
+		SUB r4, r2, r3
+		STR r1, [r6]
+		STR r4, [r5]
+		
+		# Update t coefficients
+		LDR r5, =t1
+		LDR r6, =t2
+		LDR r1, [r5]
+		LDR r2, [r6]
+		MUL r3, r1, r0
+		SUB r4, r2, r3
+		STR r1, [r6]
+		STR r4, [r5]
+		
+		# Calculate new remainder
+		LDR r5, =rem2
+		LDR r6, =rem1
+		
+		LDR r0, [r5]
+		LDR r1, [r6]
 		BL modulo
+		LDR r1, [r6]
+		STR r1, [r5]
+		STR r0, [r6]
+		
+		# End loop if remainder is 0
+		CMP r0, #0
+		BNE loopExtEuclidean
+		B returnCprivexp
+		
+	makePositive:
+		LDR r3, =totient
+		LDR r2, [r3]
+		ADD r0, r0, r2
+		STR r0, [r1]
+		B returnCprivexp
 
-		CMP r0, #1
-		BEQ endprivexploop
+    	returnCprivexp:
+		# Return private key 'd' (stored in t2)
+		LDR r1, =t2
+		LDR r0, [r1]
 
-		ADD r6, r6, #1
-		B privexploop		
+		# add totient to t2 if not positive
+		CMP r0, #0
+		BLT makePositive
 
-	endprivexploop:
-
-	MOV r0, r6
-
-	# Restore and return
-	LDR lr, [sp, #0]
-	LDR r4, [sp, #4]
-	LDR r5, [sp, #8]
-	LDR r6, [sp, #12]
-	ADD sp, sp, #16
-	MOV pc, lr
-
-
+		# Restore and return
+		LDR lr, [sp, #0]
+		LDR r4, [sp, #4]
+		LDR r5, [sp, #8]
+		LDR r6, [sp, #12]
+		ADD sp, sp, #16
+		MOV pc, lr
+	
 .data
+	rem1: .word 0
+	rem2: .word 0
+	t1: .word 0
+	t2: .word 0
+	s1: .word 0
+	s2: .word 0
+	q1: .word 0
+	totient: .word 0
 
 #END FUNCTION cprivexp
 
@@ -491,7 +563,7 @@ encrypt:
         ADD sp, sp, #28
         MOV pc, lr
 .data
-	filename: .asciz "encrypt.txt"
+	filename: .asciz "encrypted.txt"
 	numberformat: .asciz "%d "
 	filetask: .asciz "w"
 #END FUNCTION encrypt
@@ -499,7 +571,6 @@ encrypt:
 
 .text
 decrypt:
-
     # AUTHOR: Adit Rao
     # PURPOSE: Read encrypted.txt, use private key exponent and modulus to produce decrypted.txt
 
@@ -508,9 +579,11 @@ decrypt:
     # r5 - modulus (n)
     # r6 - decrypt.txt file ptr
     # r7 - encrypt.txt file ptr
+    # r8 - numFormat
+    # r9 - charFormat
 
     # Push
-    SUB sp, sp, #4
+    SUB sp, sp, #20
     STR lr, [sp]
     STR r4, [sp,#4]
     STR r5, [sp,#8]
@@ -518,41 +591,60 @@ decrypt:
     STR r7, [sp,#16]
 
     # Vault key data
-    MOV r4, r1 // assume 'd' originally stored in r1
-    MOV r5, r2 // assume 'n' originally stored in r2
+    MOV r4, r1 // assume 'd' initially stored in r1
+    MOV r5, r2 // assume 'n' initially stored in r2
 
-    
     # Open read filestream, store ptr in r7
     LDR r0, =in_File
-    LDR r1, =r_Filetask
+    LDR r1, =r_FileTask
     BL fopen
-    MOV r7, r0
+    MOV r7, r0 
+
+    # Check for correct file open
+    CMP r7, #0
+    BEQ openERR    
 
     # Open write filestream, store ptr in r6
     LDR r0, =out_File
-    LDR r1, =w_Filetask
+    LDR r1, =w_FileTask
     BL fopen
     MOV r6, r0
-    
+   
     decryptLoop:
-        MOV r0, r7
-        BL fgetc
-        CMP r0, #-1  // must call fgetc before determining EOF
-        BEQ endDecryptLoop
+	# Load arguments to fscanf
+        MOV r0, r7  
+	LDR r1, =numFormat
+	LDR r2, =next_in
+	BL fscanf
+
+	# Check for EOF	
+	CMP r0, #-1
+	BEQ endDecryptLoop
+
+	LDR r0, =next_in
+	LDR r0, [r0]
 
         MOV r1, r4 // move 'd' to r1 for POW function
         BL pow
 
-        MOV r1, r5 // move 'n' into r1 for MODULO
-        BL modulo
+        MOV r2, r5 // move 'n' into r1 for MODULO
+        BL modLarge
         
-        MOV r1, r6
-        BL fputc
+	# Load arguments to fprintf
+	MOV r2, r0
+	MOV r0, r6
+	LDR r1, =charFormat
+	BL fprintf	
 
         B decryptLoop
 
+    openERR:
+ 	LDR r0, =openError
+	BL printf
+	B end
+
     endDecryptLoop:
-        MOV r1, r7
+        MOV r0, r7
         BL fclose
     
         MOV r0, r6
@@ -561,6 +653,7 @@ decrypt:
         LDR r0, =finish
         BL printf
 
+    end:
         # Pop
         LDR lr, [sp]
         LDR r4, [sp,#4]
@@ -569,13 +662,19 @@ decrypt:
         LDR r7, [sp,#16]
         ADD sp, sp, #20
         MOV pc, lr
+
+	
 .data
     in_File: .asciz "encrypted.txt"
     out_File: .asciz "decrypted.txt"
     numFormat: .asciz "%d"
-    r_Filetask: .asciz "r"
-    w_Filetask: .asciz "w"
+    charFormat: .asciz "%c"
+    r_FileTask: .asciz "r"
+    w_FileTask: .asciz "w"
+    next_in: .word 0
+    openError: .asciz "!! ERROR: File not opened !!"
     finish: .asciz "Your cipher was decrypted and stored in 'decrypted.txt'.\n"
+
 #END FUNCTION decrypt
 
 
@@ -612,7 +711,7 @@ findPrime:
 
 		CMP r0, #0
 		BEQ notPrime
-		ADD r5, r5, #2
+		ADD r5, r5, #1
 		B primeCheckLoop
 
 		notPrime:
