@@ -376,6 +376,19 @@ cpubexp:
 .data
 #END FUNCTION cpubexp
 
+#
+# cprivexp(totient, e)
+# This function calculates the RSA private key 'd' using the extended Euclidean algorithm.
+# It takes two inputs: the totient and the public exponent (e), and computes the modular inverse
+# of e modulo totient, which is the private key 'd'.
+#
+# The algorithm stores intermediate results of the extended Euclidean process:
+#   - q -> Quotient
+#   - rem -> Remainder
+#   - s -> Coefficients for s (used in calculation of d)
+#   - t -> Coefficients for t (used in calculation of d)
+#
+# A 1 index refers to the previous iteration, and a 2 index refers to two iterations ago.
 
 .text
 cprivexp:
@@ -479,7 +492,7 @@ cprivexp:
 		LDR r6, [sp, #12]
 		ADD sp, sp, #16
 		MOV pc, lr
-	
+
 .data
 	rem1: .word 0
 	rem2: .word 0
