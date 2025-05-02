@@ -126,11 +126,14 @@ pow:
 	
 		CMP r6, #1
 		BEQ endMultiplyLoop
+
+		#Initialize array offset and carry to 0
 		MOV r8, #0
 		MOV r11, #0
 	
 		innerloop:
-
+		
+			#End the inner loop if the counter is greater then the current number of array indices
                         CMP r9, r10
                         BGT endinnerloop
 
@@ -526,42 +529,51 @@ encrypt:
 	STR r8, [sp, #20]
 	STR r9, [sp, #24]
 
+	#Move function parameters to conserved registers and initialize counter to 0
 	MOV r4, r1
 	MOV r5, r2
 	MOV r6, r0
 	MOV r8, #0
 
+	#Open/create encrypted.txt with write task
 	LDR r0, =filename
 	LDR r1, =filetask
 	BL fopen
 
+	#Store file pointer in r9
 	MOV r9, r0
 
 	encryptloop:
 		CMP r8, #50
 		BEQ endencryptloop
 
+		#Seperate each character of the user input based on the loop iteration, end loop if 0
 		LDRB r2, [r6, r8]
 		CMP r2, #0
 		BEQ endencryptloop
 		
+		#Move character into r0, e into r1 and call pow
 		MOV r0, r2
 		MOV r1, r4
 		BL pow
 
+		#Move n into r2, r0 and r1 are already the array pointer and index size after calling pow
 		MOV r2, r5
 		BL modLarge
+		
+		#Move cypher text into r2, the correct format into r1 and file pointer into r0 and then write
 		MOV r2, r0
-
 		LDR r1, =numberformat
 		MOV r0, r9
 		BL fprintf
 		
+		#Iterate loop counter
 		ADD r8, r8, #1
 		B encryptloop
 
 	endencryptloop:	
 
+	#Close file
 	MOV r0, r9
 	BL fclose
 
@@ -634,13 +646,14 @@ decrypt:
 	CMP r0, #-1
 	BEQ endDecryptLoop
 
+	#Load cypher character into r0
 	LDR r0, =next_in
 	LDR r0, [r0]
 
         MOV r1, r4 // move 'd' to r1 for POW function
         BL pow
 
-        MOV r2, r5 // move 'n' into r1 for MODULO
+        MOV r2, r5 // move 'n' into r2 for MODULO
         BL modLarge
         
 	# Load arguments to fprintf
@@ -685,7 +698,7 @@ decrypt:
     r_FileTask: .asciz "r"
     w_FileTask: .asciz "w"
     next_in: .word 0
-    openError: .asciz "!! ERROR: File not opened !!"
+    openError: .asciz "!! ERROR: File not opened !!\n"
     finish: .asciz "Your cipher was decrypted and stored in 'decrypted.txt'.\n"
 
 #END FUNCTION decrypt
@@ -693,6 +706,11 @@ decrypt:
 
 .text
 findPrime:
+
+	# r4 - number to check
+	# r5 - current divisor
+	# r6 - Loop end point
+	# r7 - True/false return value
 
         #Push the stack record
         SUB sp, sp, #20
@@ -702,38 +720,46 @@ findPrime:
         STR r6, [sp, #12]
         STR r7, [sp, #16]
 
+	#Load the function parameter into r4, and initialize divisor to 2
         MOV r4, r0
 	MOV r5, #2
-	MOV r1, r5
 
+	#Divide the number by two to get the stopping point for the loop
+	MOV r1, r5
 	BL __aeabi_idiv
 
+	#Move stopping point into r6 and initialize true/false return value to 0
 	MOV r6, r0
 	MOV r7, #0
-
 	
 	primeCheckLoop:
 
 		CMP r5, r6
 		BGT endPrimeCheckLoop
 
+		#Move dividend into r0, divisor into r1 and call modulo
 		MOV r0, r4
 		MOV r1, r5
-
 		BL modulo
 
+		#If 0 is returned branch to notPrime
 		CMP r0, #0
 		BEQ notPrime
+
+		#Iterate divisor and branch to the beginning of the loop
 		ADD r5, r5, #1
 		B primeCheckLoop
 
 		notPrime:
+
+			#If not prime, set return value to 1
 			MOV r7, #1
 			B endPrimeCheckLoop
 
 
 	endPrimeCheckLoop:
 
+	#Return true/false in r0
 	MOV r0, r7	
 
         #Pop the stack record

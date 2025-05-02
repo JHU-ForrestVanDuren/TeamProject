@@ -39,8 +39,12 @@ main:
 
 	# Validates that user selection is between 1-3
 	CheckEntry:
+
+		#Prompt user to select a program to run
 		LDR r0, =choices
 		BL printf
+
+		#Take user input
 		LDR r0, =numFormat
 		LDR r1, =mainSelection
 		BL scanf
@@ -64,9 +68,12 @@ main:
 		CMP r0, #1
 		
 		BEQ Proceed
+
+			#Give invalid input prompt
   			LDR r0, =invalid
 			BL printf
 			
+			#Clear stdin and branch back to CheckEntry
 			LDR r0, =invalidformat
 			BL scanf
 
@@ -77,50 +84,59 @@ main:
 		MOV r1, r11 // Restore selection to r1 (in case it was overwritten)
 		MOV r2, #2
 
+		#Branch to generate, encrypt or decrypt flow based on the user input
 		CMP r1, r2
 		BLT Generate
 			BGT Decrypt
 			B Encrypt
 
 		Generate:
+
+		#Prompt that user has selected the generate flow
 		LDR r0, =generate
 		BL printf
-
+		
 		primeLoop1:
 
+			#Prompt for prime number
 			LDR r0, =pprompt
 			BL printf
 
+			#Take user input for prime number
 			LDR r0, =numFormat
 			LDR r1, =p
 			BL scanf
-
+				
+			#Initialize logical variables
 			MOV r1, #0
 			MOV r2, #0
 
+			#Load user input into r0
 			LDR r0, =p
 			LDR r0, [r0]
 
+			#Check if input is between 13 and 47 and branch to invalidp if not
 			CMP r0, #13
 			MOVGE r1, #1
-			
 			CMP r0, #47
 			MOVLE r2, #1
-
 			AND r1, r1, r2
 			CMP r1, #1
-
 			BNE invalidp
 
+			#Check if number is prime, branch to invalid if not
 			BL findPrime
 			CMP r0, #1
 			BEQ invalidp
 			B endPrimeLoop1	
 
 			invalidp:
+
+				#Give invalid prompt
 				LDR r0, =invalid
 				BL printf
 
+				#Clear stdin and loop
 				LDR r0, =invalidformat
 				BL scanf
 				B primeLoop1
@@ -129,53 +145,57 @@ main:
 
                 primeLoop2:
 
-
+			#Prompt for unique prime
                         LDR r0, =qprompt
                         BL printf
 
+			#Read user input
                         LDR r0, =numFormat
                         LDR r1, =q
                         BL scanf
 
+			#Initialize logical variables
                         MOV r1, #0
                         MOV r2, #0
 
+			#Load user input into r0
                         LDR r0, =q
                         LDR r0, [r0]
 
+			#Check if input between 13 and 47, branch to invalidq if not
                         CMP r0, #13
                         MOVGE r1, #1
-
                         CMP r0, #47
                         MOVLE r2, #1
-
                         AND r1, r1, r2
                         CMP r1, #1
-			
 			BNE invalidq
 
+			#Load p into r3
 			LDR r3, =p
 			LDR r3, [r3]
-			
+
+			#If p = q branch to invalid
 			CMP r0, r3
                         BEQ invalidq
 
+			#Check if prime, branch to invalid if not
                         BL findPrime
                         CMP r0, #1
                         BEQ invalidq
-			
                         B endPrimeLoop2
 
 
                         invalidq:
+
+				#Give invalid prompt
                                 LDR r0, =invalid
                                 BL printf
 
+				#Clear stdin and loop
                                 LDR r0, =invalidformat
                                 BL scanf
                                 B primeLoop2
-
-
 
                 endPrimeLoop2:
 
@@ -196,77 +216,96 @@ main:
         	MUL r5, r0, r1
 
 		eloop:
+
+			#Give prompt for e
 			LDR r0, =eprompt
 			MOV r1, r5
 			MOV r2, r5
 			BL printf
 
+			#Take user input
 			LDR r0, =numFormat
 			LDR r1, =e
 			BL scanf
 
+			#Load user input into r7	
 			LDR r7, =e
 			LDR r7, [r7]
+
+			#Check if user input is a valid public key exponent, branch to inavlid if not
 			MOV r0, r7
 			MOV r1, r5
-
 			BL cpubexp
-
 			CMP r0, #1
 			BNE enotvalid
 			B endeloop
 
 			enotvalid:
+
+				#Give invalid input prompt
 				LDR r0, =invalid
 				BL printf
 
+				#Clear stdin and loop
 				LDR r0, =invalidformat
 				BL scanf
-
 				B eloop
 
 		endeloop:
 
+		#Generate private key from e and the totient
 	       	MOV r0, r5
 		MOV r1, r7
 		BL cprivexp
 
+		#Store private key in r9
 		MOV r9, r0
 
+		#Open/Create public key file with write task
 		LDR r0, =pubKeyFile
 		LDR r1, =writeTask
 		BL fopen
 		
+		#Store file pointer in r0
 		MOV r8, r0
 
+		#Write n to public key file
 		LDR r1, =numFormatSpace
 		MOV r2, r6
 		BL fprintf
 
+		#Write e to public key file
 		LDR r1, =numFormatSpace
 		MOV r0, r8
 		MOV r2, r7
 		BL fprintf
 
+		#Close the file
 		MOV r0, r8
 		BL fclose
 
+		#Open/create private key file with write task
 		LDR r0, =privKeyFile
 		LDR r1, =writeTask
 		BL fopen
 	
+		#Save file pointer to r8
 		MOV r8, r0
 
+		#Write private key exponent to file
 		LDR r1, =numFormat
 		MOV r2, r9
 		BL fprintf
 
+		#Close the file
 		MOV r0, r8
 		BL fclose
 
 		B End			
 
 		Encrypt:
+
+		#Prompt that user has chosen encrypt flow
 		LDR r0, =encryptPrompt
 		BL printf
 
@@ -275,32 +314,38 @@ main:
 		LDR r1, =message
 		BL scanf
 		
+		#Open pubkey file with read task
 		LDR r0, =pubKeyFile
 		LDR r1, =readTask
 		BL fopen
 
+		#If no file pointer is returned, branch to noPublicKey
 		CMP r0, #0
 		BEQ noPublicKey 
 
+		#Save file pointer to r8
 		MOV r8, r0
 
+		#Read n from pubkey file
 		LDR r1, =numFormat
 		LDR r2, =n
 		BL fscanf
 
-		LDR r0, =n
-		LDR r0, [r0]
+		#Move file pointer to r0
 		MOV r0, r8
+
+		#Read e from pubkey file
 		LDR r1, =numFormat
 		LDR r2, =e
 		BL fscanf
 
+		#Close file
 		MOV r0, r8
 		BL fclose
 
+		#Load e and n into r1, and r3
 		LDR r1, =e
 		LDR r1, [r1]
-
 		LDR r2, =n
 		LDR r2, [r2]
 
@@ -310,12 +355,15 @@ main:
 		B End
 
 		noPublicKey:
-
-			LDR r0, =noPublicKeyPrompt
+			
+			#Prompt that no key file exists and branch to end
+			LDR r0, =noKeyFilePrompt
 			BL printf
 			B End
 
 		Decrypt:
+
+		#Prompt that user has selected decrypt flow
 		LDR r0, =decryptPrompt
 		BL printf
 		
@@ -324,6 +372,10 @@ main:
 		LDR r1, =readTask
 		BL fopen
 		MOV r8, r0
+
+		#If no file pointer is returned, branch to noPrivateKey
+		CMP r0, #0
+		BEQ noPrivateKey
 		
 		# Store 'n' for later use
 		LDR r1, =numFormat
@@ -350,6 +402,13 @@ main:
 		BL decrypt
 		B End
 
+		noPrivateKey:
+				
+			#Prompt that no private key file exists and branch to end
+			LDR r0, =noKeyFilePrompt
+			BL printf
+			B End
+
 	End:
 		#Pop	
 		LDR lr, [sp,#0]
@@ -375,7 +434,7 @@ main:
 	generate: .asciz "Here we will branch to the generate function flow.\n"
 	encryptPrompt: .asciz "Input a message to be encrypted\n"
 	decryptPrompt: .asciz "Here we will branch to the decrypt function flow.\n"
-	noPublicKeyPrompt: .asciz "No public key file is present. Generate the keys before running encrypt\n"
+	noKeyFilePrompt: .asciz "No key file is present. Generate the keys before running encrypt\n"
 	messageFormat: .asciz " %[^\n]"
 	message: .space 50
 	numFormat: .asciz "%d"
